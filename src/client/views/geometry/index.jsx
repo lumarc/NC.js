@@ -37,8 +37,24 @@ export default class GeometryView extends React.Component {
 
     // SCENES
     this.geometryScene = new THREE.Scene();
+    
+    this._globalxform = new THREE.Matrix4();
+    this._globalxform.set(
+      -1, 0, 0, 0,
+       0, 0, 1, 0,
+       0, 1, 0, 0,
+       0, 0, 0, 1
+    );
+    //this.geometryScene.applyMatrix(m);
     this.annotationScene = new THREE.Scene();
+    
+    //this.annotationScene.applyMatrix(m);
+
     this.overlayScene = new THREE.Scene();
+
+    this.geometryScene.applyMatrix(this._globalxform);
+    this.annotationScene.applyMatrix(this._globalxform);
+    this.overlayScene.applyMatrix(this._globalxform);
 
     // CAMERA
     this.camera = new THREE.PerspectiveCamera(
@@ -47,6 +63,7 @@ export default class GeometryView extends React.Component {
       0.1,
       1000000
     );
+    
     this.camera.position.x = -5000;
     this.camera.position.y = -5000;
     this.camera.position.z = 0;
@@ -352,11 +369,13 @@ export default class GeometryView extends React.Component {
         {'usage': 'asis', 'rendered': true}
       );
     }
-
+    let machine = _.find(_.values(object._objects),{'usage':'machine'});
+    let newUp;
     //let partPos = new THREE.Vector3()
     //  .setFromMatrixPosition(part.object3D.matrixWorld);
     let toolBox = tool.model.getBoundingBox().clone();
 
+    if(machine===undefined){
     let toolMax = toolBox.max.clone().applyMatrix4(tool.object3D.matrixWorld);
     let toolMin = toolBox.min.clone().applyMatrix4(tool.object3D.matrixWorld);
 
@@ -364,11 +383,13 @@ export default class GeometryView extends React.Component {
 
     //let toolPos = tool.object3D.position.clone().sub(partPos);
 
-    let newUp = toolAxis.clone();
+    newUp = toolAxis.clone();
 
     // get the unit vector corresponding to this view
     newUp = GeometryView.getAxisVector(newUp);
-
+    } else {
+      newUp = new THREE.Vector3(0,1,0);
+    }
     // now calculate which side we want to view from
     // TODO: make sure fixtures work properly with machines and other changes
     let fixture = _.find(
@@ -511,6 +532,7 @@ export default class GeometryView extends React.Component {
   }
 
   updateSceneBoundingBox(newBoundingBox) {
+    newBoundingBox.applyMatrix4(this._globalxform);
     this.sceneCenter.copy(newBoundingBox.center());
     this.sceneRadius = newBoundingBox.size().length() / 2;
   }
